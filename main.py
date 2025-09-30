@@ -2,8 +2,9 @@ import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
-from src.preprocess import load_data, preprocess_for_prediction
-from src.model import train_model, evaluate_model
+from preprocess import load_data, preprocess_for_prediction
+from model import train_model, evaluate_model
+from dashboard import dashboard
 
 st.set_page_config(page_title="HR Analytics Toolkit", layout="wide")
 st.title("🧑‍💼 Pythonic HR Analytics Toolkit")
@@ -14,7 +15,7 @@ df = load_data()
 # Define consistent features
 feature_cols = ["Age", "JobLevel", "MonthlyIncome", "YearsAtCompany"]
 
-# Train model once on startup
+# Train model once at startup
 X_train, X_test, y_train, y_test = preprocess_for_prediction(df)
 model = train_model(X_train[feature_cols], y_train)
 acc, report = evaluate_model(model, X_test[feature_cols], y_test)
