@@ -170,11 +170,7 @@ elif menu == "Attrition Prediction":
         st.download_button("📥 Download Full Predictions", csv,
                            "employee_attrition_predictions.csv", "text/csv")
 
-# ----------------- Footer -----------------
-st.markdown("""
----
-<div style="text-align: center;">
-    Developed by <a href="https://linktr.ee/realdrdj" target="_blank"><b>Prof. Dinesh K.</b></a>
-</div>
-""", unsafe_allow_html=True)
-
+st.markdown("---")
+col1, col2, col3 = st.columns([1,2,1])
+with col2:
+    st.markdown("### 👨‍🏫 [Developed by Prof. Dinesh K.](https://linktr.ee/realdrdj)")
