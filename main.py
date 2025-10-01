@@ -59,7 +59,43 @@ menu = st.sidebar.radio("Choose a section", ["Overview","EDA","Attrition Dashboa
 # ----------------- Overview -----------------
 if menu == "Overview":
     st.subheader("📌 Project Overview")
-    st.write("Upload your HR data or use the demo. The model predicts attrition risk.")
+    st.markdown("""
+    Welcome to the **Pythonic HR Analytics Toolkit**.  
+    This tool helps HR professionals, managers, and researchers **analyze employee data and predict attrition risk**.
+
+    ### 🔍 How It Works
+    - Upload your **HR dataset (CSV)**, or use the built-in demo dataset.  
+    - The system automatically trains a machine learning model to detect attrition patterns.  
+    - Predictions are based on key factors like **Age, Job Level, Monthly Income, and Years at Company**.  
+    - If your dataset contains additional columns (e.g., Department, Attrition), the tool will adapt and provide deeper insights.
+
+    ### 📊 What You Can Do
+    1. **Explore Workforce Data**  
+       - View summary statistics and correlation heatmaps.  
+       - Understand how variables (e.g., income, tenure) relate to attrition.  
+
+    2. **Visualize Attrition Trends**  
+       - Department-level attrition analysis.  
+       - Age-group attrition patterns.  
+       - Compare different groups to identify risk hotspots.  
+
+    3. **Predict Employee Attrition**  
+       - Test scenarios by entering employee details manually.  
+       - Upload a full dataset and generate **employee-wise attrition probabilities**.  
+       - Download predictions as CSV for further HR planning.  
+
+    ### 🎯 Why Use This Tool?
+    Employee turnover can be costly and disruptive.  
+    This toolkit provides **data-driven insights** to help HR teams:
+    - Identify employees at **high attrition risk**.  
+    - Understand the **drivers of attrition**.  
+    - Design **targeted retention strategies** (salary adjustments, career paths, training).  
+
+    ---
+    ⚠️ **Note:** This tool is a prototype for educational and research purposes.  
+    For real-world use, predictions should be validated with larger datasets and tailored to your organization’s context.
+    """)
+
     st.metric("Model Accuracy (Test Set)", f"{acc:.2%}")
 
 # ----------------- EDA -----------------
