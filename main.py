@@ -34,6 +34,10 @@ else:
     df = load_demo_data()
     st.sidebar.info("Using demo dataset")
 
+# ----------------- Ensure Attrition Numeric -----------------
+if "Attrition" in df.columns and df["Attrition"].dtype == "object":
+    df["Attrition"] = df["Attrition"].map({"Yes":1,"No":0,"Y":1,"N":0}).fillna(0).astype(int)
+
 # ----------------- Define Features -----------------
 feature_cols = [c for c in ["Age","JobLevel","MonthlyIncome","YearsAtCompany"] if c in df.columns]
 if not feature_cols:
@@ -82,15 +86,27 @@ elif menu == "Attrition Dashboard":
         st.warning("⚠️ Attrition column not found in dataset.")
     else:
         st.subheader("📊 Attrition Risk Dashboard")
+
+        # Attrition by Department
         if "Department" in df.columns:
             dept_chart = df.groupby("Department")["Attrition"].mean().reset_index()
             st.bar_chart(dept_chart.set_index("Department"))
         else:
             st.info("No Department column found, skipping department analysis.")
 
+        # Attrition by Age Group
+        if "Age" in df.columns:
+            df["AgeGroup"] = pd.cut(df["Age"], bins=[18,30,40,50,60],
+                                    labels=["18-30","31-40","41-50","51-60"])
+            age_chart = df.groupby("AgeGroup")["Attrition"].mean().reset_index()
+            st.bar_chart(age_chart.set_index("AgeGroup"))
+
 # ----------------- Prediction -----------------
 elif menu == "Attrition Prediction":
     st.subheader("🤖 Predict Employee Attrition")
+
+    # Manual input
+    st.markdown("### Test a Hypothetical Employee")
     age = st.number_input("Age", 18, 60, 30)
     job_level = st.slider("Job Level", 1, 5, 2)
     monthly_income = st.number_input("Monthly Income", 1000, 20000, 5000)
@@ -104,3 +120,16 @@ elif menu == "Attrition Prediction":
 
     st.write(f"### Prediction: {'⚠️ Attrition Risk' if pred==1 else '✅ No Attrition'}")
     st.write(f"Probability of leaving: **{prob:.2%}**")
+
+    # Bulk predictions if user uploaded data
+    if uploaded_file:
+        st.markdown("### Employee-Wise Attrition Predictions")
+        df_pred = df.copy()
+        df_pred["Attrition_Prob"] = model.predict_proba(df_pred[feature_cols])[:,1]
+        df_pred["Attrition_Predicted"] = model.predict(df_pred[feature_cols])
+        st.dataframe(df_pred.head(20))  # show first 20 employees
+
+        # Download option
+        csv = df_pred.to_csv(index=False).encode("utf-8")
+        st.download_button("📥 Download Full Predictions", csv,
+                           "employee_attrition_predictions.csv", "text/csv")
