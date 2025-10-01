@@ -169,3 +169,12 @@ elif menu == "Attrition Prediction":
         csv = df_pred.to_csv(index=False).encode("utf-8")
         st.download_button("📥 Download Full Predictions", csv,
                            "employee_attrition_predictions.csv", "text/csv")
+
+# ----------------- Footer -----------------
+st.markdown("""
+---
+<div style="text-align: center;">
+    Developed by <a href="https://linktr.ee/realdrdj" target="_blank"><b>Prof. Dinesh K.</b></a>
+</div>
+""", unsafe_allow_html=True)
+
