@@ -3,16 +3,9 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
 
-# Try to import Plotly, fallback to seaborn if missing
-try:
-    import plotly.express as px
-    PLOTLY_AVAILABLE = True
-except ImportError:
-    PLOTLY_AVAILABLE = False
-
 from sklearn.model_selection import train_test_split
 from sklearn.ensemble import RandomForestClassifier
-from sklearn.metrics import accuracy_score, classification_report
+from sklearn.metrics import accuracy_score
 
 st.set_page_config(page_title="HR Analytics Toolkit", layout="wide")
 st.title("🧑‍💼 Pythonic HR Analytics Toolkit")
@@ -31,52 +24,38 @@ def load_demo_data():
 
 uploaded_file = st.sidebar.file_uploader("📂 Upload your HR dataset (CSV)", type=["csv"])
 if uploaded_file:
-    df = pd.read_csv(uploaded_file)
-    st.sidebar.success("Custom dataset loaded successfully ✅")
+    try:
+        df = pd.read_csv(uploaded_file)
+        st.sidebar.success("Custom dataset loaded ✅")
+    except Exception as e:
+        st.sidebar.error(f"Upload failed: {e}")
+        df = load_demo_data()
 else:
     df = load_demo_data()
     st.sidebar.info("Using demo dataset")
 
-# ----------------- Preprocess -----------------
-def preprocess_for_prediction(df):
-    features = [col for col in ["Age","JobLevel","MonthlyIncome","YearsAtCompany"] if col in df.columns]
-    X = df[features]
-    y = df["Attrition"]
-    return train_test_split(X, y, test_size=0.2, random_state=42), features
+# ----------------- Define Features -----------------
+feature_cols = [c for c in ["Age","JobLevel","MonthlyIncome","YearsAtCompany"] if c in df.columns]
+if not feature_cols:
+    st.error("❌ No valid features found in dataset. Please include Age, JobLevel, MonthlyIncome, or YearsAtCompany.")
+    st.stop()
 
-# ----------------- Train & Evaluate -----------------
-def train_model(X_train, y_train):
-    model = RandomForestClassifier(random_state=42)
-    model.fit(X_train, y_train)
-    return model
+# ----------------- Train Model -----------------
+X = df[feature_cols]
+y = df["Attrition"] if "Attrition" in df.columns else [0]*len(df)  # dummy if missing
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
-def evaluate_model(model, X_test, y_test):
-    y_pred = model.predict(X_test)
-    acc = accuracy_score(y_test, y_pred)
-    report = classification_report(y_test, y_pred, output_dict=True)
-    return acc, report
-
-# Train model
-(train_X, test_X, train_y, test_y), feature_cols = preprocess_for_prediction(df)
-model = train_model(train_X, train_y)
-acc, report = evaluate_model(model, test_X, test_y)
+model = RandomForestClassifier(random_state=42)
+model.fit(X_train, y_train)
+acc = accuracy_score(y_test, model.predict(X_test))
 
 # ----------------- Sidebar Menu -----------------
-menu = st.sidebar.radio(
-    "Choose a section",
-    ["Overview", "EDA", "Attrition Dashboard", "Attrition Prediction"]
-)
+menu = st.sidebar.radio("Choose a section", ["Overview","EDA","Attrition Dashboard","Attrition Prediction"])
 
 # ----------------- Overview -----------------
 if menu == "Overview":
     st.subheader("📌 Project Overview")
-    st.markdown("""
-    This toolkit demonstrates **practical HR analytics**:
-    - Upload your HR dataset (or use demo).
-    - Explore workforce trends.
-    - Predict employee attrition.
-    - Export actionable reports.
-    """)
+    st.write("Upload your HR data or use the demo. The model predicts attrition risk.")
     st.metric("Model Accuracy (Test Set)", f"{acc:.2%}")
 
 # ----------------- EDA -----------------
@@ -88,15 +67,11 @@ elif menu == "EDA":
     numeric_cols = df.select_dtypes(include=['int64','float64']).columns
     if len(numeric_cols) > 1:
         st.write("### Correlation Heatmap")
-        if PLOTLY_AVAILABLE:
-            corr = df[numeric_cols].corr()
-            fig = px.imshow(corr, text_auto=True, aspect="auto",
-                            color_continuous_scale="RdBu_r")
-            st.plotly_chart(fig, use_container_width=True)
-        else:
-            fig, ax = plt.subplots(figsize=(10,8))
-            sns.heatmap(df[numeric_cols].corr(), cmap="coolwarm", annot=True, fmt=".2f", ax=ax)
-            st.pyplot(fig)
+        fig, ax = plt.subplots(figsize=(8,6))
+        sns.heatmap(df[numeric_cols].corr(), cmap="coolwarm", annot=True, ax=ax)
+        st.pyplot(fig)
+    else:
+        st.warning("Not enough numeric columns for correlation heatmap.")
 
     st.write("### Summary Statistics")
     st.write(df.describe())
@@ -104,43 +79,18 @@ elif menu == "EDA":
 # ----------------- Dashboard -----------------
 elif menu == "Attrition Dashboard":
     if "Attrition" not in df.columns:
-        st.error("Attrition column missing in dataset.")
+        st.warning("⚠️ Attrition column not found in dataset.")
     else:
         st.subheader("📊 Attrition Risk Dashboard")
-
-        # Attrition by Department
         if "Department" in df.columns:
             dept_chart = df.groupby("Department")["Attrition"].mean().reset_index()
-            if PLOTLY_AVAILABLE:
-                fig = px.bar(dept_chart, x="Department", y="Attrition",
-                             title="Attrition Rate by Department",
-                             labels={"Attrition":"Attrition Rate"})
-                st.plotly_chart(fig, use_container_width=True)
-            else:
-                fig, ax = plt.subplots()
-                sns.barplot(x="Department", y="Attrition", data=dept_chart, ax=ax)
-                st.pyplot(fig)
-
-        # Attrition by Age Group
-        df["AgeGroup"] = pd.cut(df["Age"], bins=[18,30,40,50,60],
-                                labels=["18-30","31-40","41-50","51-60"])
-        age_chart = df.groupby("AgeGroup")["Attrition"].mean().reset_index()
-        if PLOTLY_AVAILABLE:
-            fig = px.bar(age_chart, x="AgeGroup", y="Attrition",
-                         title="Attrition Rate by Age Group",
-                         labels={"Attrition":"Attrition Rate"})
-            st.plotly_chart(fig, use_container_width=True)
+            st.bar_chart(dept_chart.set_index("Department"))
         else:
-            fig, ax = plt.subplots()
-            sns.barplot(x="AgeGroup", y="Attrition", data=age_chart, ax=ax)
-            st.pyplot(fig)
+            st.info("No Department column found, skipping department analysis.")
 
 # ----------------- Prediction -----------------
 elif menu == "Attrition Prediction":
     st.subheader("🤖 Predict Employee Attrition")
-
-    # Manual input
-    st.markdown("### Test a Hypothetical Employee")
     age = st.number_input("Age", 18, 60, 30)
     job_level = st.slider("Job Level", 1, 5, 2)
     monthly_income = st.number_input("Monthly Income", 1000, 20000, 5000)
@@ -154,16 +104,3 @@ elif menu == "Attrition Prediction":
 
     st.write(f"### Prediction: {'⚠️ Attrition Risk' if pred==1 else '✅ No Attrition'}")
     st.write(f"Probability of leaving: **{prob:.2%}**")
-
-    # Bulk predictions
-    if uploaded_file:
-        st.markdown("### Bulk Prediction on Uploaded Dataset")
-        df_pred = df.copy()
-        df_pred["Attrition_Predicted"] = model.predict(df_pred[feature_cols])
-        df_pred["Attrition_Prob"] = model.predict_proba(df_pred[feature_cols])[:,1]
-        st.dataframe(df_pred.head())
-
-        # Download option
-        csv = df_pred.to_csv(index=False).encode('utf-8')
-        st.download_button("📥 Download Predictions as CSV", csv,
-                           "attrition_predictions.csv", "text/csv")
