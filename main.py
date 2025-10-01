@@ -2,7 +2,14 @@ import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
-import plotly.express as px
+
+# Try to import Plotly, fallback to seaborn if missing
+try:
+    import plotly.express as px
+    PLOTLY_AVAILABLE = True
+except ImportError:
+    PLOTLY_AVAILABLE = False
+
 from sklearn.model_selection import train_test_split
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import accuracy_score, classification_report
@@ -80,10 +87,16 @@ elif menu == "EDA":
 
     numeric_cols = df.select_dtypes(include=['int64','float64']).columns
     if len(numeric_cols) > 1:
-        st.write("### Correlation Heatmap (Interactive)")
-        corr = df[numeric_cols].corr()
-        fig = px.imshow(corr, text_auto=True, aspect="auto", color_continuous_scale="RdBu_r")
-        st.plotly_chart(fig, use_container_width=True)
+        st.write("### Correlation Heatmap")
+        if PLOTLY_AVAILABLE:
+            corr = df[numeric_cols].corr()
+            fig = px.imshow(corr, text_auto=True, aspect="auto",
+                            color_continuous_scale="RdBu_r")
+            st.plotly_chart(fig, use_container_width=True)
+        else:
+            fig, ax = plt.subplots(figsize=(10,8))
+            sns.heatmap(df[numeric_cols].corr(), cmap="coolwarm", annot=True, fmt=".2f", ax=ax)
+            st.pyplot(fig)
 
     st.write("### Summary Statistics")
     st.write(df.describe())
@@ -98,16 +111,29 @@ elif menu == "Attrition Dashboard":
         # Attrition by Department
         if "Department" in df.columns:
             dept_chart = df.groupby("Department")["Attrition"].mean().reset_index()
-            fig = px.bar(dept_chart, x="Department", y="Attrition", title="Attrition Rate by Department",
-                         labels={"Attrition":"Attrition Rate"})
-            st.plotly_chart(fig, use_container_width=True)
+            if PLOTLY_AVAILABLE:
+                fig = px.bar(dept_chart, x="Department", y="Attrition",
+                             title="Attrition Rate by Department",
+                             labels={"Attrition":"Attrition Rate"})
+                st.plotly_chart(fig, use_container_width=True)
+            else:
+                fig, ax = plt.subplots()
+                sns.barplot(x="Department", y="Attrition", data=dept_chart, ax=ax)
+                st.pyplot(fig)
 
         # Attrition by Age Group
-        df["AgeGroup"] = pd.cut(df["Age"], bins=[18,30,40,50,60], labels=["18-30","31-40","41-50","51-60"])
+        df["AgeGroup"] = pd.cut(df["Age"], bins=[18,30,40,50,60],
+                                labels=["18-30","31-40","41-50","51-60"])
         age_chart = df.groupby("AgeGroup")["Attrition"].mean().reset_index()
-        fig = px.bar(age_chart, x="AgeGroup", y="Attrition", title="Attrition Rate by Age Group",
-                     labels={"Attrition":"Attrition Rate"})
-        st.plotly_chart(fig, use_container_width=True)
+        if PLOTLY_AVAILABLE:
+            fig = px.bar(age_chart, x="AgeGroup", y="Attrition",
+                         title="Attrition Rate by Age Group",
+                         labels={"Attrition":"Attrition Rate"})
+            st.plotly_chart(fig, use_container_width=True)
+        else:
+            fig, ax = plt.subplots()
+            sns.barplot(x="AgeGroup", y="Attrition", data=age_chart, ax=ax)
+            st.pyplot(fig)
 
 # ----------------- Prediction -----------------
 elif menu == "Attrition Prediction":
@@ -139,4 +165,5 @@ elif menu == "Attrition Prediction":
 
         # Download option
         csv = df_pred.to_csv(index=False).encode('utf-8')
-        st.download_button("📥 Download Predictions as CSV", csv, "attrition_predictions.csv", "text/csv")
+        st.download_button("📥 Download Predictions as CSV", csv,
+                           "attrition_predictions.csv", "text/csv")
